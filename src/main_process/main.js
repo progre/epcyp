@@ -2,6 +2,9 @@ import {ipcMain, app, BrowserWindow, Tray, Menu, shell} from 'electron'
 import {exec, execSync} from 'child_process'
 import request from 'superagent'
 import Config from 'electron-config'
+import {Client as Pypc} from 'peercast-yp-proxy-client'
+import {stringify as stringifyChannels} from 'peercast-yp-channels-parser';
+import {Observable} from 'rxjs';
 
 import TrayManager from 'main_process/tray_manager'
 import MenuManager from 'main_process/menu_manager'
@@ -21,6 +24,8 @@ var window = { main: null, settings: null, favorite: null }
 var tray = new TrayManager()
 var menu = new MenuManager()
 var peercast = new PeercastManager()
+
+var autoUpdateStarted = false;
 
 /*-----------------------------------------
   アプリケーション起動準備完了時
@@ -180,15 +185,22 @@ app.on('window-all-closed', ()=>{
 -----------------------------------------*/
 // ------- index.txtを取得して返す -------
 ipcMain.on('asyn-yp', (event, ypList)=>{
-  let asyns = ypList.map((yp)=>{
-    return getAsyn(yp.url+'index.txt')
-  })
-  Promise.all(asyns).then((values)=>{
-    event.sender.send('asyn-yp-reply', values)
-  }).catch((err)=>{
-    console.log(err)
-    event.sender.send('asyn-yp-reply', [])
-  })
+  if (autoUpdateStarted) {
+    throw new Error('Auto update already started.');
+  }
+  autoUpdateStarted = true;
+  const pypc = new Pypc();
+  Observable.merge(
+    pypc.channelsUpdated,
+    pypc.differencesReceived,
+    Observable.interval(1 * 60 * 1000),
+  ).subscribe(
+    () => {
+      const channels = pypc.getChannels()
+      console.log(channels.length)
+      event.sender.send('asyn-yp-reply', [{text: stringifyChannels(channels, new Date()), request: {url: ''}}])
+    }
+  )
 })
 
 // ---------- 再生プレイヤーの起動 ----------

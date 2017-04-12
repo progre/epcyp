@@ -31,7 +31,8 @@ module.exports = {
     'electron-json-storage',
     'electron-load-devtool',
     'fix-path',
-    'moment'
+    'moment',
+    'socket.io-client'
   ],
   plugins: [
     new WebpackNotifierPlugin()

@@ -155,7 +155,7 @@ class Index extends React.Component {
       channels: channels,
       lastUpdateTime: moment(),
       autoUpdateCount: 60,
-      updateStatus: 'wait'
+      updateStatus: 'updating'
     })
   }
 
